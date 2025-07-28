@@ -1,9 +1,6 @@
 "use client";
 
-import Filters from "@/components/Filters";
-import Standards from "@/components/Standards";
 import Map from "@/components/Map";
-import StatisticsPanel from "@/components/StatisticsPanel";
 import { useState } from "react";
 
 const zoneCenters = {
@@ -28,12 +25,7 @@ export default function Home() {
   return (
     <div className="flex p-4 gap-4 w-full">
       <div className="flex flex-col gap-6 flex-2/3 bg-white rounded-DEFAULT p-DEFAULT">
-        <Filters onZoneChange={handleZoneChange} selectedZone={selectedZone} />
-        <Standards />
         <Map center={center} />
-      </div>
-      <div className="flex-1/3 bg-white rounded-DEFAULT">
-        <StatisticsPanel />
       </div>
     </div>
   );
