@@ -22,16 +22,22 @@ function Map({ center }) {
     { value: { start: 10, end: 12 }, label: "ช่วง 10-12 เดือน" }
   ];
 
-  // Separated project types
+  // Updated project types to match the new mapping
   const projectTypeOptions = [
-    { value: "ratoon_1", label: "อ้อยตอ 1" },
-    { value: "ratoon_2", label: "อ้อยตอ 2" },
-    { value: "ratoon_3", label: "อ้อยตอ 3" },
-    { value: "ratoon_4", label: "อ้อยตอ 4" },
-    { value: "ratoon_5", label: "อ้อยตอ 5" },
-    { value: "planted_october", label: "อ้อยปลูกตุลาคม" },
-    { value: "planted_watered", label: "อ้อยปลูกน้ำราด" }
+    { value: "ratoon_1", label: "อ้อยตอ 1", cane_type: "ratoon" },
+    { value: "ratoon_2", label: "อ้อยตอ 2", cane_type: "ratoon" },
+    { value: "ratoon_3", label: "อ้อยตอ 3", cane_type: "ratoon" },
+    { value: "ratoon_4", label: "อ้อยตอ 4", cane_type: "ratoon" },
+    { value: "ratoon_5", label: "อ้อยตอ 5", cane_type: "ratoon" },
+    { value: "planted_october", label: "อ้อยปลูกตุลาคม", cane_type: "plant_october" },
+    { value: "planted_watered", label: "อ้อยปลูกน้ำราด", cane_type: "plant_watered" }
   ];
+
+  // Get cane_type based on project type
+  const getCaneTypeForProject = (projectType) => {
+    const project = projectTypeOptions.find(p => p.value === projectType);
+    return project ? project.cane_type : "ratoon";
+  };
 
   // Get available grades for selected project type and period
   const getAvailableGrades = (projectType, period) => {
@@ -103,7 +109,7 @@ function Map({ center }) {
     return "period1_1_3";
   };
 
-  // State for filters
+  // State for filters - now includes cane_type
   const [filters, setFilters] = useState({
     year: 2025,
     start_month: 1,
@@ -116,6 +122,7 @@ function Map({ center }) {
     zones: "MPDC,SB,MAC,MPV,MPL,MPK,MKS,MKB",
     include_raw_data: true,
     limit: 10000000,
+    cane_type: "ratoon", // Add cane_type to initial filters
   });
 
   // State for separate filter selections
@@ -243,6 +250,11 @@ function Map({ center }) {
       setLoadingProgress(50);
       
       const params = new URLSearchParams(filters);
+      
+      // Debug log to check if cane_type is included
+      console.log('Sending request with cane_type:', filters.cane_type);
+      console.log('Full params:', params.toString());
+      
       const response = await fetch(`${API_BASE_URL}/analytics?${params}`);
       
       if (!response.ok) {
@@ -257,6 +269,9 @@ function Map({ center }) {
       setLoadingStage('Processing zone statistics...');
       
       const data = await response.json();
+      
+      // Debug log to check if cane_type is in response
+      console.log('Received response:', data);
       
       setLoadingProgress(85);
       setLoadingStage('Analyzing data patterns...');
@@ -421,6 +436,7 @@ function Map({ center }) {
   useEffect(() => {
     const period = getPeriodFromMonthRange(selectedMonthRange.value);
     const availableGrades = getAvailableGrades(selectedProjectType, period);
+    const caneType = getCaneTypeForProject(selectedProjectType); // Get cane_type for the project
     
     // If current grade is not available for the new combination, select the first available grade
     let newGrade = selectedSugarcaneGrade;
@@ -435,7 +451,8 @@ function Map({ center }) {
       period: period,
       sugarcane_grade: newGrade,
       start_month: selectedMonthRange.value.start,
-      end_month: selectedMonthRange.value.end
+      end_month: selectedMonthRange.value.end,
+      cane_type: caneType // Update cane_type based on project selection
     }));
     
     // Reset standard values loaded flag when key filter parameters change
@@ -536,6 +553,7 @@ function Map({ center }) {
                     <p style="font-weight: bold; color: green;">Above Standard</p>
                     <p>Zone: ${record.zone}</p>
                     <p>Year: ${record.year}, Month: ${record.month}</p>
+                    ${record.cane_type ? `<p>Cane Type: ${record.cane_type}</p>` : ''}
                     ${selectedIndices.map(index => 
                       `<p>${index.toUpperCase()}: ${record[index] || 'N/A'}</p>`
                     ).join('')}
@@ -569,6 +587,7 @@ function Map({ center }) {
                     <p style="font-weight: bold; color: red;">Below Standard</p>
                     <p>Zone: ${record.zone}</p>
                     <p>Year: ${record.year}, Month: ${record.month}</p>
+                    ${record.cane_type ? `<p>Cane Type: ${record.cane_type}</p>` : ''}
                     ${selectedIndices.map(index => 
                       `<p>${index.toUpperCase()}: ${record[index] || 'N/A'}</p>`
                     ).join('')}
@@ -732,6 +751,9 @@ function Map({ center }) {
                 </option>
               ))}
             </select>
+            <div className="text-xs text-gray-500 mt-1">
+              Cane Type: {getCaneTypeForProject(selectedProjectType)}
+            </div>
           </div>
 
           <div>
@@ -795,6 +817,30 @@ function Map({ center }) {
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Current Filter Summary */}
+      <div className="bg-blue-50 p-4 rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-2">Current Filter Summary</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <span className="font-medium">Project:</span> {filters.project_name}
+          </div>
+          <div>
+            <span className="font-medium">Cane Type:</span> {filters.cane_type}
+          </div>
+          <div>
+            <span className="font-medium">Period:</span> {filters.period}
+          </div>
+          <div>
+            <span className="font-medium">Grade:</span> {filters.sugarcane_grade}
+          </div>
+        </div>
+        {analyticsData?.query_params && (
+          <div className="mt-2 text-xs text-gray-600">
+            API Response includes cane_type: {analyticsData.query_params.cane_type || 'Not included'}
+          </div>
+        )}
       </div>
 
       {/* Zone Selection */}
