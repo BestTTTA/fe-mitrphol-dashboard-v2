@@ -44,7 +44,7 @@ function Map({ center }) {
     switch(caneType) {
       case "ratoon": return "อ้อยตอ";
       case "plant_october": return "อ้อยปลูกตุลาคม";
-      case "plant_watered": return "อ้อยปลูกน้ำราด";
+      case "planted_watered": return "อ้อยปลูกน้ำราด";
       default: return caneType;
     }
   };
