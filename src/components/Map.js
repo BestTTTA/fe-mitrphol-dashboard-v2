@@ -30,13 +30,23 @@ function Map({ center }) {
     { value: "ratoon_4", label: "อ้อยตอ 4", cane_type: "ratoon" },
     { value: "ratoon_5", label: "อ้อยตอ 5", cane_type: "ratoon" },
     { value: "planted_october", label: "อ้อยปลูกตุลาคม", cane_type: "plant_october" },
-    { value: "planted_watered", label: "อ้อยปลูกน้ำราด", cane_type: "plant_watered" }
+    { value: "planted_watered", label: "อ้อยปลูกน้ำราด", cane_type: "planted_watered" }
   ];
 
   // Get cane_type based on project type
   const getCaneTypeForProject = (projectType) => {
     const project = projectTypeOptions.find(p => p.value === projectType);
     return project ? project.cane_type : "ratoon";
+  };
+
+  // Get Thai label for cane type
+  const getCaneTypeLabel = (caneType) => {
+    switch(caneType) {
+      case "ratoon": return "อ้อยตอ";
+      case "plant_october": return "อ้อยปลูกตุลาคม";
+      case "plant_watered": return "อ้อยปลูกน้ำราด";
+      default: return caneType;
+    }
   };
 
   // Get available grades for selected project type and period
@@ -537,27 +547,37 @@ function Map({ center }) {
             zoneInfoWindow.open(map, zoneMarker);
           });
 
-          // Add raw data points for this zone
+          // Add raw data points for this zone - ABOVE STANDARD
           if (zoneStats.above_records) {
             zoneStats.above_records.forEach((record) => {
               if (record.lat && record.lng) {
                 const dataMarker = new window.google.maps.Marker({
                   position: { lat: parseFloat(record.lat), lng: parseFloat(record.lng) },
                   map,
-                  title: `${zoneStats.zone} - Above Standard`,
+                  title: `${zoneStats.zone} - Above Standard - ${getCaneTypeLabel(record.cane_type || filters.cane_type)}`,
                   icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
                 });
 
                 const recordInfoContent = `
-                  <div>
-                    <p style="font-weight: bold; color: green;">Above Standard</p>
-                    <p>Zone: ${record.zone}</p>
-                    <p>Year: ${record.year}, Month: ${record.month}</p>
-                    ${record.cane_type ? `<p>Cane Type: ${record.cane_type}</p>` : ''}
-                    ${selectedIndices.map(index => 
-                      `<p>${index.toUpperCase()}: ${record[index] || 'N/A'}</p>`
-                    ).join('')}
-                    <p>Lat: ${record.lat}, Lng: ${record.lng}</p>
+                  <div style="max-width: 350px;">
+                    <h4 style="margin: 0 0 8px 0; color: green; font-weight: bold;">✓ Above Standard</h4>
+                    <div style="background-color: #f0f9ff; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+                      <p style="margin: 2px 0;"><strong>Zone:</strong> ${record.zone}</p>
+                      <p style="margin: 2px 0;"><strong>ประเภทอ้อย:</strong> ${getCaneTypeLabel(record.cane_type || filters.cane_type)}</p>
+                      <p style="margin: 2px 0;"><strong>เกรด:</strong> ${filters.sugarcane_grade}</p>
+                      <p style="margin: 2px 0;"><strong>ปี/เดือน:</strong> ${record.year}/${record.month}</p>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                      <strong>Vegetation Indices:</strong><br/>
+                      ${selectedIndices.map(index => 
+                        `<span style="display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; background-color: #e0f2fe; border-radius: 3px; font-size: 12px;">
+                          ${index.toUpperCase()}: ${record[index] !== undefined ? Number(record[index]).toFixed(3) : 'N/A'}
+                        </span>`
+                      ).join('')}
+                    </div>
+                    <div style="font-size: 12px; color: #666;">
+                      <strong>Location:</strong> ${record.lat}, ${record.lng}
+                    </div>
                   </div>
                 `;
 
@@ -572,26 +592,37 @@ function Map({ center }) {
             });
           }
 
+          // Add raw data points for this zone - BELOW STANDARD
           if (zoneStats.below_records) {
             zoneStats.below_records.forEach((record) => {
               if (record.lat && record.lng) {
                 const dataMarker = new window.google.maps.Marker({
                   position: { lat: parseFloat(record.lat), lng: parseFloat(record.lng) },
                   map,
-                  title: `${zoneStats.zone} - Below Standard`,
+                  title: `${zoneStats.zone} - Below Standard - ${getCaneTypeLabel(record.cane_type || filters.cane_type)}`,
                   icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
                 });
 
                 const recordInfoContent = `
-                  <div>
-                    <p style="font-weight: bold; color: red;">Below Standard</p>
-                    <p>Zone: ${record.zone}</p>
-                    <p>Year: ${record.year}, Month: ${record.month}</p>
-                    ${record.cane_type ? `<p>Cane Type: ${record.cane_type}</p>` : ''}
-                    ${selectedIndices.map(index => 
-                      `<p>${index.toUpperCase()}: ${record[index] || 'N/A'}</p>`
-                    ).join('')}
-                    <p>Lat: ${record.lat}, Lng: ${record.lng}</p>
+                  <div style="max-width: 350px;">
+                    <h4 style="margin: 0 0 8px 0; color: red; font-weight: bold;">⚠ Below Standard</h4>
+                    <div style="background-color: #fef2f2; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
+                      <p style="margin: 2px 0;"><strong>Zone:</strong> ${record.zone}</p>
+                      <p style="margin: 2px 0;"><strong>ประเภทอ้อย:</strong> ${getCaneTypeLabel(record.cane_type || filters.cane_type)}</p>
+                      <p style="margin: 2px 0;"><strong>เกรด:</strong> ${filters.sugarcane_grade}</p>
+                      <p style="margin: 2px 0;"><strong>ปี/เดือน:</strong> ${record.year}/${record.month}</p>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                      <strong>Vegetation Indices:</strong><br/>
+                      ${selectedIndices.map(index => 
+                        `<span style="display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; background-color: #fee2e2; border-radius: 3px; font-size: 12px;">
+                          ${index.toUpperCase()}: ${record[index] !== undefined ? Number(record[index]).toFixed(3) : 'N/A'}
+                        </span>`
+                      ).join('')}
+                    </div>
+                    <div style="font-size: 12px; color: #666;">
+                      <strong>Location:</strong> ${record.lat}, ${record.lng}
+                    </div>
                   </div>
                 `;
 
@@ -610,7 +641,7 @@ function Map({ center }) {
     };
 
     initializeMap();
-  }, [isLoaded, loadError, analyticsData, center, filters]);
+  }, [isLoaded, loadError, analyticsData, center, filters, selectedIndices]);
 
   const handleFilterChange = (key, value) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -1048,7 +1079,7 @@ function Map({ center }) {
       {/* Legend */}
       <div className="bg-white p-4 rounded-lg shadow">
         <h4 className="font-semibold mb-2">Map Legend</h4>
-        <div className="flex space-x-4">
+        <div className="flex space-x-4 flex-wrap">
           <div className="flex items-center">
             <div className="w-4 h-4 bg-green-500 rounded-full mr-2"></div>
             <span>Above Standard</span>
@@ -1061,6 +1092,18 @@ function Map({ center }) {
             <div className="w-4 h-4 bg-blue-500 rounded-full mr-2"></div>
             <span>Zone Centers</span>
           </div>
+          <div className="flex items-center">
+            <div className="w-4 h-4 bg-gray-400 rounded mr-2"></div>
+            <span>Manufacturing Plant</span>
+          </div>
+        </div>
+        <div className="mt-3 text-sm text-gray-600">
+          <p><strong>Cane Types:</strong></p>
+          <ul className="list-disc list-inside ml-4 mt-1">
+            <li>อ้อยตอ (Ratoon) - Sugarcane regrowth cycles</li>
+            <li>อ้อยปลูกตุลาคม (Planted October) - October planting</li>
+            <li>อ้อยปลูกน้ำราด (Planted Watered) - Irrigated planting</li>
+          </ul>
         </div>
       </div>
     </div>
