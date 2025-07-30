@@ -228,7 +228,7 @@ function Map({ center }) {
   const markersRef = useRef([]);
 
   const zoneCenters = {
-    SB: { lat: 14.86250407773616, lng: 106.3585499327103 },
+    SB: { lat: 14.862504078842958, lng: 100.358549932741414 },
     MPDC: { lat: 14.84514, lng: 99.75922 },
     MAC: { lat: 15.828701000429223, lng: 104.47471520283926 },
     MPV: { lat: 16.67827120388637, lng: 102.44576336099253 },
@@ -647,17 +647,17 @@ useEffect(() => {
       setMapInstance(map);
 
       // Add center marker
-      const centerMarker = new window.google.maps.Marker({
-        position: center || { lat: 15.87, lng: 100.9925 },
-        map,
-        title: "Center",
-        icon: {
-          url: "/manufacturing-plant.png",
-          scaledSize: new window.google.maps.Size(70, 70),
-        },
-        zIndex: 9999,
-      });
-      markersRef.current.push(centerMarker);
+      // const centerMarker = new window.google.maps.Marker({
+      //   position: center || { lat: 15.87, lng: 100.9925 },
+      //   map,
+      //   title: "Center",
+      //   icon: {
+      //     url: "/manufacturing-plant.png",
+      //     scaledSize: new window.google.maps.Size(70, 70),
+      //   },
+      //   zIndex: 9999,
+      // });
+      // markersRef.current.push(centerMarker);
 
       // Add zone markers with optimized info windows
       analyticsData.zone_statistics?.forEach((zoneStats) => {
