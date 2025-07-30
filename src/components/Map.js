@@ -1186,8 +1186,8 @@ const recordInfoContent = `
                     updated. Currently selected: {selectedIndices.join(", ")}
                   </p>
                   <p className="text-xs text-orange-600">
-                    ⚠️ Changes to standard values will require clicking "Apply
-                    Changes" to take effect
+                    ⚠️ Changes to standard values will require clicking &quot;Apply
+                    Changes&quot; to take effect
                   </p>
                 </div>
                 <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-4">
@@ -1354,7 +1354,7 @@ const recordInfoContent = `
               : `ไม่พบค่ามาตรฐานที่ท่านเลือก โปรดเลือกการกรองข้อมูลอื่น`}
           </p>
           <p className="text-red-500 text-sm mt-1">
-            Please modify your filters and click "Apply Changes" to try again.
+            Please modify your filters and click &quot;Apply Changes&quot; to try again.
           </p>
           <p className="text-blue-600 text-xs mt-1">
             💡 Try reducing the data limit to {DEFAULT_LIMIT.toLocaleString()}{" "}
