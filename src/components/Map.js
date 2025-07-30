@@ -629,223 +629,260 @@ function Map({ center }) {
     }
   }, [selectedIndices, filters.indices, error]);
 
-  // Update filters when selections change
-  useEffect(() => {
-    const period = getPeriodFromMonthRange(selectedMonthRange.value);
-    const availableGrades = getAvailableGrades(selectedProjectType, period);
-    const caneType = getCaneTypeForProject(selectedProjectType);
+// Initialize map with optimized marker creation
+useEffect(() => {
+  if (!isLoaded || loadError || !analyticsData) return;
 
-    let newGrade = selectedSugarcaneGrade;
-    if (!availableGrades.includes(selectedSugarcaneGrade)) {
-      newGrade = availableGrades.length > 0 ? availableGrades[0] : "A";
-      setSelectedSugarcaneGrade(newGrade);
-    }
+  const initializeMap = () => {
+    if (mapRef.current && window.google && window.google.maps) {
+      // Clear existing markers first
+      clearAllMarkers();
 
-    setFilters((prev) => ({
-      ...prev,
-      project_name: selectedProjectType,
-      period: period,
-      sugarcane_grade: newGrade,
-      start_month: selectedMonthRange.value.start,
-      end_month: selectedMonthRange.value.end,
-      cane_type: caneType,
-      _t: Date.now(),
-      no_cache: true,
-    }));
-  }, [
-    selectedProjectType,
-    selectedMonthRange,
-    selectedSugarcaneGrade,
-    getPeriodFromMonthRange,
-    getAvailableGrades,
-    getCaneTypeForProject,
-  ]);
+      const map = new window.google.maps.Map(mapRef.current, {
+        center: center || { lat: 15.87, lng: 100.9925 },
+        zoom: 7,
+        mapTypeId: "satellite",
+      });
 
-  // Initialize map with optimized marker creation
-  useEffect(() => {
-    if (!isLoaded || loadError || !analyticsData) return;
+      setMapInstance(map);
 
-    const initializeMap = () => {
-      if (mapRef.current && window.google && window.google.maps) {
-        // Clear existing markers first
-        clearAllMarkers();
+      // Add center marker
+      const centerMarker = new window.google.maps.Marker({
+        position: center || { lat: 15.87, lng: 100.9925 },
+        map,
+        title: "Center",
+        icon: {
+          url: "/manufacturing-plant.png",
+          scaledSize: new window.google.maps.Size(70, 70),
+        },
+        zIndex: 9999,
+      });
+      markersRef.current.push(centerMarker);
 
-        const map = new window.google.maps.Map(mapRef.current, {
-          center: center || { lat: 15.87, lng: 100.9925 },
-          zoom: 7,
-          mapTypeId: "satellite",
-        });
+      // Add zone markers with optimized info windows
+      analyticsData.zone_statistics?.forEach((zoneStats) => {
+        const zoneCenter = zoneCenters[zoneStats.zone];
+        if (!zoneCenter) return;
 
-        setMapInstance(map);
-
-        // Add center marker
-        const centerMarker = new window.google.maps.Marker({
-          position: center || { lat: 15.87, lng: 100.9925 },
+        const zoneMarker = new window.google.maps.Marker({
+          position: zoneCenter,
           map,
-          title: "Center",
+          title: zoneStats.zone,
+          label: {
+            text: zoneStats.zone,
+            color: "#FFFFFF",
+            fontSize: "12px",
+            fontWeight: "bold",
+          },
           icon: {
             url: "/manufacturing-plant.png",
-            scaledSize: new window.google.maps.Size(70, 70),
+            scaledSize: new window.google.maps.Size(60, 60),
           },
-          zIndex: 9999,
         });
-        markersRef.current.push(centerMarker);
+        markersRef.current.push(zoneMarker);
 
-        // Add zone markers with optimized info windows
-        analyticsData.zone_statistics?.forEach((zoneStats) => {
-          const zoneCenter = zoneCenters[zoneStats.zone];
-          if (!zoneCenter) return;
-
-          const zoneMarker = new window.google.maps.Marker({
-            position: zoneCenter,
-            map,
-            title: zoneStats.zone,
-            label: {
-              text: zoneStats.zone,
-              color: "#FFFFFF",
-              fontSize: "12px",
-              fontWeight: "bold",
-            },
-            icon: {
-              url: "/manufacturing-plant.png",
-              scaledSize: new window.google.maps.Size(60, 60),
-            },
-          });
-          markersRef.current.push(zoneMarker);
-
-          const zoneInfoContent = `
-            <div style="max-width: 300px;">
-              <h3 style="margin: 0 0 10px 0; color: #333;">Zone: ${
-                zoneStats.zone
-              }</h3>
-              <div style="margin-bottom: 10px;">
-                <strong>Statistics:</strong><br/>
-                Total Records: ${zoneStats.total_records}<br/>
-                Above Standard: ${
-                  zoneStats.above_std_count
-                } (${zoneStats.above_std_percentage.toFixed(1)}%)<br/>
-                Below Standard: ${
-                  zoneStats.below_std_count
-                } (${zoneStats.below_std_percentage.toFixed(1)}%)
-              </div>
-              <div style="margin-bottom: 10px;">
-                <strong>Standard Values:</strong><br/>
-                ${Object.entries(zoneStats.std_values)
-                  .map(([key, value]) => `${key.toUpperCase()}: ${value}`)
-                  .join("<br/>")}
-              </div>
-              <div>
-                <strong>Location:</strong><br/>
-                Lat: ${zoneCenter.lat}<br/>
-                Lng: ${zoneCenter.lng}
-              </div>
+        const zoneInfoContent = `
+          <div style="max-width: 300px;">
+            <h3 style="margin: 0 0 10px 0; color: #333;">Zone: ${
+              zoneStats.zone
+            }</h3>
+            <div style="margin-bottom: 10px;">
+              <strong>Statistics:</strong><br/>
+              Total Records: ${zoneStats.total_records}<br/>
+              Above Standard: ${
+                zoneStats.above_std_count
+              } (${zoneStats.above_std_percentage.toFixed(1)}%)<br/>
+              Below Standard: ${
+                zoneStats.below_std_count
+              } (${zoneStats.below_std_percentage.toFixed(1)}%)
             </div>
-          `;
+            <div style="margin-bottom: 10px;">
+              <strong>Standard Values:</strong><br/>
+              ${Object.entries(zoneStats.std_values)
+                .map(([key, value]) => `${key.toUpperCase()}: ${value}`)
+                .join("<br/>")}
+            </div>
+            <div>
+              <strong>Location:</strong><br/>
+              Lat: ${zoneCenter.lat}<br/>
+              Lng: ${zoneCenter.lng}
+            </div>
+          </div>
+        `;
 
-          const zoneInfoWindow = new window.google.maps.InfoWindow({
-            content: zoneInfoContent,
-          });
-
-          zoneMarker.addListener("click", () => {
-            zoneInfoWindow.open(map, zoneMarker);
-          });
-
-          // Add limited data points - Above Standard (สีเขียว)
-          if (zoneStats.above_records && zoneStats.above_records.length > 0) {
-            zoneStats.above_records.forEach((record, index) => {
-              if (record.lat && record.lng && index < MAX_MARKERS_PER_ZONE) {
-                // จำกัดจำนวน
-                const dataMarker = new window.google.maps.Marker({
-                  position: {
-                    lat: parseFloat(record.lat),
-                    lng: parseFloat(record.lng),
-                  },
-                  map,
-                  title: `${zoneStats.zone} - Above Standard`,
-                  icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
-                });
-                markersRef.current.push(dataMarker);
-
-const recordInfoContent = `
-                  <div style="max-width: 350px;">
-                    <h4 style="margin: 0 0 8px 0; color: red; font-weight: bold;">⚠ Below Standard</h4>
-                    <div style="background-color: #fef2f2; padding: 8px; border-radius: 4px; margin-bottom: 8px;">
-                      <p style="margin: 2px 0;"><strong>Zone:</strong> ${record.zone}</p>
-                      <p style="margin: 2px 0;"><strong>ประเภทอ้อย:</strong> ${getCaneTypeLabel(record.cane_type || filters.cane_type)}</p>
-                      <p style="margin: 2px 0;"><strong>เกรด:</strong> ${filters.sugarcane_grade}</p>
-                      <p style="margin: 2px 0;"><strong>ปี/เดือน:</strong> ${record.year}/${record.month}</p>
-                    </div>
-                    <div style="margin-bottom: 8px;">
-                      <strong>Vegetation Indices:</strong><br/>
-                      ${selectedIndices.map(index => 
-                        `<span style="display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; background-color: #fee2e2; border-radius: 3px; font-size: 12px;">
-                          ${index.toUpperCase()}: ${record[index] !== undefined ? Number(record[index]).toFixed(3) : 'N/A'}
-                        </span>`
-                      ).join('')}
-                    </div>
-                    <div style="font-size: 12px; color: #666;">
-                      <strong>Location:</strong> ${record.lat}, ${record.lng}
-                    </div>
-                  </div>
-                `;
-
-                const recordInfoWindow = new window.google.maps.InfoWindow({
-                  content: recordInfoContent,
-                });
-
-                dataMarker.addListener("click", () => {
-                  recordInfoWindow.open(map, dataMarker);
-                });
-              }
-            });
-          }
-
-          // Add limited data points - Below Standard (สีแดง)
-          if (zoneStats.below_records && zoneStats.below_records.length > 0) {
-            zoneStats.below_records.forEach((record, index) => {
-              if (record.lat && record.lng && index < MAX_MARKERS_PER_ZONE) {
-                // จำกัดจำนวน
-                const dataMarker = new window.google.maps.Marker({
-                  position: {
-                    lat: parseFloat(record.lat),
-                    lng: parseFloat(record.lng),
-                  },
-                  map,
-                  title: `${zoneStats.zone} - Below Standard`,
-                  icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                });
-                markersRef.current.push(dataMarker);
-
-                // Simplified info window
-                const recordInfoContent = `
-                  <div style="max-width: 200px;">
-                    <h4 style="margin: 0 0 5px 0; color: red;">⚠ Below Standard</h4>
-                    <p style="margin: 2px 0; font-size: 12px;"><strong>Zone:</strong> ${record.zone}</p>
-                    <p style="margin: 2px 0; font-size: 12px;"><strong>Grade:</strong> ${filters.sugarcane_grade}</p>
-                    <p style="margin: 2px 0; font-size: 12px;"><strong>Date:</strong> ${record.year}/${record.month}</p>
-                  </div>
-                `;
-
-                const recordInfoWindow = new window.google.maps.InfoWindow({
-                  content: recordInfoContent,
-                });
-
-                dataMarker.addListener("click", () => {
-                  recordInfoWindow.open(map, dataMarker);
-                });
-              }
-            });
-          }
+        const zoneInfoWindow = new window.google.maps.InfoWindow({
+          content: zoneInfoContent,
         });
 
-        console.log(
-          `Map initialized with ${markersRef.current.length} markers`
-        );
-      }
-    };
+        zoneMarker.addListener("click", () => {
+          zoneInfoWindow.open(map, zoneMarker);
+        });
 
-    initializeMap();
-  }, [isLoaded, loadError, analyticsData, center, filters, clearAllMarkers]);
+        // Add limited data points - Above Standard (สีเขียว)
+        if (zoneStats.above_records && zoneStats.above_records.length > 0) {
+          zoneStats.above_records.forEach((record, index) => {
+            if (record.lat && record.lng && index < MAX_MARKERS_PER_ZONE) {
+              const dataMarker = new window.google.maps.Marker({
+                position: {
+                  lat: parseFloat(record.lat),
+                  lng: parseFloat(record.lng),
+                },
+                map,
+                title: `${zoneStats.zone} - Above Standard`,
+                icon: "http://maps.google.com/mapfiles/ms/icons/green-dot.png",
+              });
+              markersRef.current.push(dataMarker);
+
+              // ✅ CORRECTED: Above Standard Info Window with GREEN styling
+              // ใช้ appliedFilters แทน filters และ selectedIndices ที่ได้ apply แล้ว
+              const appliedIndices = appliedFilters ? appliedFilters.indices.split(',') : ['ndvi'];
+              const recordInfoContent = `
+                <div style="max-width: 350px;">
+                  <h4 style="margin: 0 0 8px 0; color: #22c55e; font-weight: bold;">✅ Above Standard</h4>
+                  <div style="background-color: #f0fdf4; padding: 8px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #bbf7d0;">
+                    <p style="margin: 2px 0;"><strong>Zone:</strong> ${record.zone}</p>
+                    <p style="margin: 2px 0;"><strong>ประเภทอ้อย:</strong> ${getCaneTypeLabel(record.cane_type || (appliedFilters ? appliedFilters.cane_type : 'ratoon'))}</p>
+                    <p style="margin: 2px 0;"><strong>เกรด:</strong> ${appliedFilters ? appliedFilters.sugarcane_grade : 'A'}</p>
+                    <p style="margin: 2px 0;"><strong>ปี/เดือน:</strong> ${record.year}/${record.month}</p>
+                  </div>
+                  <div style="margin-bottom: 8px;">
+                    <strong>Vegetation Indices:</strong><br/>
+                    ${appliedIndices.map(index => 
+                      `<span style="display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; background-color: #dcfce7; border-radius: 3px; font-size: 12px; border: 1px solid #bbf7d0;">
+                        ${index.toUpperCase()}: ${record[index] !== undefined ? Number(record[index]).toFixed(3) : 'N/A'}
+                      </span>`
+                    ).join('')}
+                  </div>
+                  <div style="margin-bottom: 8px;">
+                    <strong>Standard Values (Current):</strong><br/>
+                    ${appliedIndices.map(index => 
+                      `<span style="display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; background-color: #f3f4f6; border-radius: 3px; font-size: 11px;">
+                        ${index.toUpperCase()} > ${zoneStats.std_values[index] || 'N/A'}
+                      </span>`
+                    ).join('')}
+                  </div>
+                  <div style="font-size: 12px; color: #666;">
+                    <strong>Location:</strong> ${record.lat}, ${record.lng}
+                  </div>
+                </div>
+              `;
+
+              const recordInfoWindow = new window.google.maps.InfoWindow({
+                content: recordInfoContent,
+              });
+
+              dataMarker.addListener("click", () => {
+                recordInfoWindow.open(map, dataMarker);
+              });
+            }
+          });
+        }
+
+        // Add limited data points - Below Standard (สีแดง)
+        if (zoneStats.below_records && zoneStats.below_records.length > 0) {
+          zoneStats.below_records.forEach((record, index) => {
+            if (record.lat && record.lng && index < MAX_MARKERS_PER_ZONE) {
+              const dataMarker = new window.google.maps.Marker({
+                position: {
+                  lat: parseFloat(record.lat),
+                  lng: parseFloat(record.lng),
+                },
+                map,
+                title: `${zoneStats.zone} - Below Standard`,
+                icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png",
+              });
+              markersRef.current.push(dataMarker);
+
+              // ✅ CORRECTED: Below Standard Info Window with RED styling
+              // ใช้ appliedFilters แทน filters และ selectedIndices ที่ได้ apply แล้ว
+              const appliedIndices = appliedFilters ? appliedFilters.indices.split(',') : ['ndvi'];
+              const recordInfoContent = `
+                <div style="max-width: 350px;">
+                  <h4 style="margin: 0 0 8px 0; color: #ef4444; font-weight: bold;">⚠️ Below Standard</h4>
+                  <div style="background-color: #fef2f2; padding: 8px; border-radius: 4px; margin-bottom: 8px; border: 1px solid #fecaca;">
+                    <p style="margin: 2px 0;"><strong>Zone:</strong> ${record.zone}</p>
+                    <p style="margin: 2px 0;"><strong>ประเภทอ้อย:</strong> ${getCaneTypeLabel(record.cane_type || (appliedFilters ? appliedFilters.cane_type : 'ratoon'))}</p>
+                    <p style="margin: 2px 0;"><strong>เกรด:</strong> ${appliedFilters ? appliedFilters.sugarcane_grade : 'A'}</p>
+                    <p style="margin: 2px 0;"><strong>ปี/เดือน:</strong> ${record.year}/${record.month}</p>
+                  </div>
+                  <div style="margin-bottom: 8px;">
+                    <strong>Vegetation Indices:</strong><br/>
+                    ${appliedIndices.map(index => 
+                      `<span style="display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; background-color: #fee2e2; border-radius: 3px; font-size: 12px; border: 1px solid #fecaca;">
+                        ${index.toUpperCase()}: ${record[index] !== undefined ? Number(record[index]).toFixed(3) : 'N/A'}
+                      </span>`
+                    ).join('')}
+                  </div>
+                  <div style="margin-bottom: 8px;">
+                    <strong>Standard Values (Current):</strong><br/>
+                    ${appliedIndices.map(index => 
+                      `<span style="display: inline-block; margin: 2px 4px 2px 0; padding: 2px 6px; background-color: #f3f4f6; border-radius: 3px; font-size: 11px;">
+                        ${index.toUpperCase()} > ${zoneStats.std_values[index] || 'N/A'}
+                      </span>`
+                    ).join('')}
+                  </div>
+                  <div style="font-size: 12px; color: #666;">
+                    <strong>Location:</strong> ${record.lat}, ${record.lng}
+                  </div>
+                </div>
+              `;
+
+              const recordInfoWindow = new window.google.maps.InfoWindow({
+                content: recordInfoContent,
+              });
+
+              dataMarker.addListener("click", () => {
+                recordInfoWindow.open(map, dataMarker);
+              });
+            }
+          });
+        }
+      });
+
+      console.log(
+        `Map initialized with ${markersRef.current.length} markers`
+      );
+    }
+  };
+
+  initializeMap();
+  
+  // ✅ FIXED: ลบ selectedIndices ออกจาก dependencies
+  // Map จะ re-render เฉพาะเมื่อมีการ apply changes เท่านั้น
+}, [isLoaded, loadError, analyticsData, center, appliedFilters, clearAllMarkers, getCaneTypeLabel]);
+
+// เพิ่ม useEffect แยกสำหรับ update filters เมื่อ selections เปลี่ยน
+useEffect(() => {
+  const period = getPeriodFromMonthRange(selectedMonthRange.value);
+  const availableGrades = getAvailableGrades(selectedProjectType, period);
+  const caneType = getCaneTypeForProject(selectedProjectType);
+
+  let newGrade = selectedSugarcaneGrade;
+  if (!availableGrades.includes(selectedSugarcaneGrade)) {
+    newGrade = availableGrades.length > 0 ? availableGrades[0] : "A";
+    setSelectedSugarcaneGrade(newGrade);
+  }
+
+  setFilters((prev) => ({
+    ...prev,
+    project_name: selectedProjectType,
+    period: period,
+    sugarcane_grade: newGrade,
+    start_month: selectedMonthRange.value.start,
+    end_month: selectedMonthRange.value.end,
+    cane_type: caneType,
+    _t: Date.now(),
+    no_cache: true,
+  }));
+}, [
+  selectedProjectType,
+  selectedMonthRange,
+  selectedSugarcaneGrade,
+  getPeriodFromMonthRange,
+  getAvailableGrades,
+  getCaneTypeForProject,
+]);
+
 
   const handleFilterChange = useCallback((key, value) => {
     setFilters((prev) => ({
