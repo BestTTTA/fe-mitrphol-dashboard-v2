@@ -1171,7 +1171,7 @@ function Map({ center }) {
                 ))}
               </div>
               <div className="mt-2 text-xs text-gray-600">
-                Selected: {selectedIndices.length} indices | Displaying all available grades: {availableGrades.join("&quot;", "&quot;")}
+                Selected: {selectedIndices.length} indices | Displaying all available grades: {availableGrades.join(",", ",")}
               </div>
             </div>
           </div>
@@ -1245,7 +1245,7 @@ function Map({ center }) {
                 <div className="mb-4 p-3 bg-blue-50 rounded">
                   <p className="text-sm text-blue-700 mb-2">
                     <strong>Note:</strong> Only selected indices will be
-                    updated. Currently selected: {selectedIndices.join("&quot;", "&quot;")}
+                    updated. Currently selected: {selectedIndices.join(",", ",")}
                   </p>
                   <p className="text-xs text-orange-600">
                     ⚠️ Changes to standard values will require clicking &quot; Apply
